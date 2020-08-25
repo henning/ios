@@ -263,7 +263,7 @@
 - (void)reloadDatasource
 {
     // test
-    if (appDelegate.activeAccount.length == 0 || self.view.window == nil) {
+    if (appDelegate.account.length == 0 || self.view.window == nil) {
         return;
     }
     
@@ -273,7 +273,7 @@
         
         CCSectionDataSourceMetadata *sectionDataSourceTemp = [CCSectionDataSourceMetadata new];
         
-        sectionDataSourceTemp  = [CCSectionMetadata creataDataSourseSectionMetadata:recordsTableMetadata listProgressMetadata:appDelegate.listProgressMetadata groupByField:@"session" filterTypeFileImage:NO filterTypeFileVideo:NO filterLivePhoto:NO sorted:@"fileName" ascending:YES activeAccount:appDelegate.activeAccount];
+        sectionDataSourceTemp  = [CCSectionMetadata creataDataSourseSectionMetadata:recordsTableMetadata listProgressMetadata:appDelegate.listProgressMetadata groupByField:@"session" filterTypeFileImage:NO filterTypeFileVideo:NO filterLivePhoto:NO sorted:@"fileName" ascending:YES account:appDelegate.account];
         
         dispatch_async(dispatch_get_main_queue(), ^{
             sectionDataSource = sectionDataSourceTemp;
@@ -477,7 +477,7 @@
         return [CCCellMainTransfer new];
     }
     
-    UITableViewCell *cell = [[NCMainCommon sharedInstance] cellForRowAtIndexPath:indexPath tableView:tableView metadata:metadata metadataFolder:nil serverUrl:metadata.serverUrl autoUploadFileName:@"" autoUploadDirectory:@"" tableShare:nil];
+    UITableViewCell *cell = [[NCMainCommon sharedInstance] cellForRowAtIndexPath:indexPath tableView:tableView metadata:metadata metadataFolder:nil serverUrl:metadata.serverUrl autoUploadFileName:@"" autoUploadDirectory:@"" tableShare:nil livePhoto:false];
     
     // TRANSFER
     

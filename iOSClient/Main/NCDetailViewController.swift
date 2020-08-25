@@ -481,26 +481,26 @@ class NCDetailViewController: UIViewController {
             }
             
             // DirectEditinf: Nextcloud Text - OnlyOffice
-            if NCUtility.sharedInstance.isDirectEditing(account: metadata.account, contentType: metadata.contentType) != nil &&  NCCommunication.shared.isNetworkReachable() {
+            if NCUtility.shared.isDirectEditing(account: metadata.account, contentType: metadata.contentType) != nil &&  NCCommunication.shared.isNetworkReachable() {
                 
-                guard let editor = NCUtility.sharedInstance.isDirectEditing(account: metadata.account, contentType: metadata.contentType) else { return }
+                guard let editor = NCUtility.shared.isDirectEditing(account: metadata.account, contentType: metadata.contentType) else { return }
                 if editor == k_editor_text || editor == k_editor_onlyoffice {
                     
-                    NCUtility.sharedInstance.startActivityIndicator(view: backgroundView)
+                    NCUtility.shared.startActivityIndicator(view: backgroundView)
 
                     if metadata.url == "" {
                         
                         var customUserAgent: String?
-                        let fileNamePath = CCUtility.returnFileNamePath(fromFileName: metadata.fileName, serverUrl: metadata.serverUrl, activeUrl: appDelegate.activeUrl)!
+                        let fileNamePath = CCUtility.returnFileNamePath(fromFileName: metadata.fileName, serverUrl: metadata.serverUrl, urlBase: metadata.urlBase, account: metadata.account)!
                         
                         if editor == k_editor_onlyoffice {
-                            customUserAgent = NCUtility.sharedInstance.getCustomUserAgentOnlyOffice()
+                            customUserAgent = NCUtility.shared.getCustomUserAgentOnlyOffice()
                             self.navigationController?.navigationBar.topItem?.title = ""
                         }
                         
                         NCCommunication.shared.NCTextOpenFile(fileNamePath: fileNamePath, editor: editor, customUserAgent: customUserAgent) { (account, url, errorCode, errorMessage) in
                             
-                            if errorCode == 0 && account == self.appDelegate.activeAccount && url != nil {
+                            if errorCode == 0 && account == self.appDelegate.account && url != nil {
                                 
                                 let frame = CGRect(x: 0, y: 0, width: self.backgroundView.frame.width, height: self.backgroundView.frame.height)
                                 let nextcloudText = NCViewerNextcloudText.init(frame: frame, configuration: WKWebViewConfiguration())
@@ -536,15 +536,15 @@ class NCDetailViewController: UIViewController {
             }
             
             // RichDocument: Collabora
-            if NCUtility.sharedInstance.isRichDocument(metadata) &&  NCCommunication.shared.isNetworkReachable() {
+            if NCUtility.shared.isRichDocument(metadata) &&  NCCommunication.shared.isNetworkReachable() {
                 
-                NCUtility.sharedInstance.startActivityIndicator(view: backgroundView)
+                NCUtility.shared.startActivityIndicator(view: backgroundView)
                 
                 if metadata.url == "" {
                     
                     NCCommunication.shared.createUrlRichdocuments(fileID: metadata.fileId) { (account, url, errorCode, errorDescription) in
                         
-                        if errorCode == 0 && account == self.appDelegate.activeAccount && url != nil {
+                        if errorCode == 0 && account == self.appDelegate.account && url != nil {
                             
                             let frame = CGRect(x: 0, y: 0, width: self.backgroundView.frame.width, height: self.backgroundView.frame.height)
                             let richDocument = NCViewerRichdocument.init(frame: frame, configuration: WKWebViewConfiguration())
@@ -641,7 +641,7 @@ extension NCDetailViewController: NCViewerImageViewControllerDelegate, NCViewerI
         let isPreview = CCUtility.fileProviderStoragePreviewIconExists(metadata.ocId, etag: metadata.etag)
         let isImage = CCUtility.fileProviderStorageSize(metadata.ocId, fileNameView: metadata.fileNameView) > 0
         let ext = CCUtility.getExtension(metadata.fileNameView)
-        let isFolderEncrypted = CCUtility.isFolderEncrypted(metadata.serverUrl, e2eEncrypted: metadata.e2eEncrypted, account: metadata.account)
+        let isFolderEncrypted = CCUtility.isFolderEncrypted(metadata.serverUrl, e2eEncrypted: metadata.e2eEncrypted, account: metadata.account, urlBase: metadata.urlBase)
         
         // Refresh self metadata && title
         if viewerImageViewController.index < metadatas.count {
@@ -720,7 +720,7 @@ extension NCDetailViewController: NCViewerImageViewControllerDelegate, NCViewerI
     
         } else if metadata.hasPreview {
                 
-            let fileNamePath = CCUtility.returnFileNamePath(fromFileName: metadata.fileName, serverUrl: metadata.serverUrl, activeUrl: appDelegate.activeUrl)!
+            let fileNamePath = CCUtility.returnFileNamePath(fromFileName: metadata.fileName, serverUrl: metadata.serverUrl, urlBase: metadata.urlBase, account: metadata.account)!
             let fileNamePreviewLocalPath = CCUtility.getDirectoryProviderStoragePreviewOcId(metadata.ocId, etag: metadata.etag)!
             let fileNameIconLocalPath = CCUtility.getDirectoryProviderStorageIconOcId(metadata.ocId, etag: metadata.etag)!
                     

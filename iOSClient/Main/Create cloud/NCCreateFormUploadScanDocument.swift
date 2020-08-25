@@ -49,7 +49,7 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
         
         self.init()
         
-        if serverUrl == CCUtility.getHomeServerUrlActiveUrl(appDelegate.activeUrl) {
+        if serverUrl == NCUtility.shared.getHomeServer(urlBase: appDelegate.urlBase, account: appDelegate.account) {
             titleServerUrl = "/"
         } else {
             titleServerUrl = (serverUrl as NSString).lastPathComponent
@@ -84,6 +84,9 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
         // Theming view
         NotificationCenter.default.addObserver(self, selector: #selector(changeTheming), name: NSNotification.Name(rawValue: k_notificationCenter_changeTheming), object: nil)
         changeTheming()
+        
+        let value = CCUtility.getTextRecognitionStatus()
+        SetTextRecognition(newValue: value)
     }
     
     @objc func changeTheming() {
@@ -218,36 +221,7 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
         
         if formRow.tag == "textRecognition" {
             
-            let rowCompressionQuality: XLFormRowDescriptor = self.form.formRow(withTag: "compressionQuality")!
-            let rowFileTape: XLFormRowDescriptor = self.form.formRow(withTag: "filetype")!
-            let rowFileName: XLFormRowDescriptor = self.form.formRow(withTag: "fileName")!
-            let rowPassword: XLFormRowDescriptor = self.form.formRow(withTag: "password")!
-           
-            self.form.delegate = nil
-            
-            if newValue as! Int == 1 {
-                rowFileTape.selectorOptions = ["PDF","TXT"]
-                rowFileTape.value = "PDF"
-                fileType = "PDF"
-                rowPassword.disabled = true
-                rowCompressionQuality.disabled = false
-            } else {
-                if arrayImages.count == 1 {
-                    rowFileTape.selectorOptions = ["PDF","JPG"]
-                } else {
-                    rowFileTape.selectorOptions = ["PDF"]
-                }
-                rowFileTape.value = "PDF"
-                fileType = "PDF"
-                rowPassword.disabled = false
-                rowCompressionQuality.disabled = false
-            }
-            
-            rowFileName.value = createFileName(rowFileName.value as? String)
-            self.updateFormRow(rowFileName)
-            self.tableView.reloadData()
-
-            self.form.delegate = self
+            self.SetTextRecognition(newValue: newValue as! Int)
         }
         
         if formRow.tag == "fileName" {
@@ -325,6 +299,44 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
         }
     }
     
+    func SetTextRecognition(newValue: Int) {
+        
+        let rowCompressionQuality: XLFormRowDescriptor = self.form.formRow(withTag: "compressionQuality")!
+        let rowFileTape: XLFormRowDescriptor = self.form.formRow(withTag: "filetype")!
+        let rowFileName: XLFormRowDescriptor = self.form.formRow(withTag: "fileName")!
+        let rowPassword: XLFormRowDescriptor = self.form.formRow(withTag: "password")!
+        let rowTextRecognition: XLFormRowDescriptor = self.form.formRow(withTag: "textRecognition")!
+
+        self.form.delegate = nil
+         
+        if newValue == 1 {
+            rowFileTape.selectorOptions = ["PDF","TXT"]
+            rowFileTape.value = "PDF"
+            fileType = "PDF"
+            rowPassword.disabled = true
+            rowCompressionQuality.disabled = false
+        } else {
+            if arrayImages.count == 1 {
+                rowFileTape.selectorOptions = ["PDF","JPG"]
+            } else {
+                rowFileTape.selectorOptions = ["PDF"]
+            }
+            rowFileTape.value = "PDF"
+            fileType = "PDF"
+            rowPassword.disabled = false
+            rowCompressionQuality.disabled = false
+        }
+         
+        rowFileName.value = createFileName(rowFileName.value as? String)
+        self.updateFormRow(rowFileName)
+        self.tableView.reloadData()
+        
+        CCUtility.setTextRecognitionStatus(newValue)
+        rowTextRecognition.value = newValue
+        
+        self.form.delegate = self
+    }
+    
     override func textFieldDidBeginEditing(_ textField: UITextField) {
         
         let cell = textField.formDescriptorCell()
@@ -363,9 +375,10 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
         
         if serverUrl != nil {
             
+            CCUtility.setDirectoryScanDocuments(serverUrl!)
             self.serverUrl = serverUrl!
             
-            if serverUrl == CCUtility.getHomeServerUrlActiveUrl(appDelegate.activeUrl) {
+            if serverUrl == NCUtility.shared.getHomeServer(urlBase: appDelegate.urlBase, account: appDelegate.account) {
                 self.titleServerUrl = "/"
             } else {
                 self.titleServerUrl = (serverUrl! as NSString).lastPathComponent
@@ -398,13 +411,13 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
         }
         
         //Create metadata for upload
-        let metadataForUpload = NCManageDatabase.sharedInstance.createMetadata(account: appDelegate.activeAccount, fileName: fileNameSave, ocId: UUID().uuidString, serverUrl: serverUrl, urlBase: appDelegate.activeUrl, url: "", contentType: "")
+        let metadataForUpload = NCManageDatabase.sharedInstance.createMetadata(account: appDelegate.account, fileName: fileNameSave, ocId: UUID().uuidString, serverUrl: serverUrl, urlBase: appDelegate.urlBase, url: "", contentType: "", livePhoto: false)
         
         metadataForUpload.session = NCCommunicationCommon.shared.sessionIdentifierBackground
         metadataForUpload.sessionSelector = selectorUploadFile
         metadataForUpload.status = Int(k_metadataStatusWaitUpload)
                 
-        if NCUtility.sharedInstance.getMetadataConflict(account: appDelegate.activeAccount, serverUrl: serverUrl, fileName: fileNameSave) != nil {
+        if NCUtility.shared.getMetadataConflict(account: appDelegate.account, serverUrl: serverUrl, fileName: fileNameSave) != nil {
                         
             guard let conflictViewController = UIStoryboard(name: "NCCreateFormUploadConflict", bundle: nil).instantiateInitialViewController() as? NCCreateFormUploadConflict else { return }
             conflictViewController.textLabelDetailNewFile = NSLocalizedString("_now_", comment: "")
@@ -416,7 +429,7 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
             
         } else {
                      
-            NCUtility.sharedInstance.startActivityIndicator(view: self.view)
+            NCUtility.shared.startActivityIndicator(view: self.view)
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 self.dismissAndUpload(metadataForUpload)
@@ -428,7 +441,7 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
         
         if metadatas != nil && metadatas!.count > 0 {
                  
-            NCUtility.sharedInstance.startActivityIndicator(view: self.view)
+            NCUtility.shared.startActivityIndicator(view: self.view)
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 self.dismissAndUpload(metadatas![0])
@@ -439,7 +452,7 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
     func dismissAndUpload(_ metadata: tableMetadata) {
         
         guard let fileNameGenerateExport = CCUtility.getDirectoryProviderStorageOcId(metadata.ocId, fileNameView: metadata.fileNameView) else {
-            NCUtility.sharedInstance.stopActivityIndicator()
+            NCUtility.shared.stopActivityIndicator()
             NCContentPresenter.shared.messageNotification("_error_", description: "_error_creation_file_", delay: TimeInterval(k_dismissAfterSecond), type: NCContentPresenter.messageType.info, errorCode: Int(k_CCErrorCreationFile), forced: true)
             return
         }
@@ -456,7 +469,7 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
                     
                     let request = VNRecognizeTextRequest { (request, error) in
                         guard let observations = request.results as? [VNRecognizedTextObservation] else {
-                            NCUtility.sharedInstance.stopActivityIndicator()
+                            NCUtility.shared.stopActivityIndicator()
                             return
                         }
                         for observation in observations {
@@ -478,7 +491,7 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
             do {
                 try textFile.write(to: NSURL(fileURLWithPath: fileNameGenerateExport) as URL  , atomically: true, encoding: .utf8)
             } catch {
-                NCUtility.sharedInstance.stopActivityIndicator()
+                NCUtility.shared.stopActivityIndicator()
                 NCContentPresenter.shared.messageNotification("_error_", description: "_error_creation_file_", delay: TimeInterval(k_dismissAfterSecond), type: NCContentPresenter.messageType.info, errorCode: Int(k_CCErrorCreationFile), forced: true)
                 return
             }
@@ -515,7 +528,7 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
                         
                         let request = VNRecognizeTextRequest { (request, error) in
                             guard let observations = request.results as? [VNRecognizedTextObservation] else {
-                                NCUtility.sharedInstance.stopActivityIndicator()
+                                NCUtility.shared.stopActivityIndicator()
                                 return
                             }
                             for observation in observations {
@@ -527,11 +540,12 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
                                 t = t.scaledBy(x: image.size.width, y: -image.size.height)
                                 t = t.translatedBy(x: 0, y: -1)
                                 let rect = observation.boundingBox.applying(t)
-                                                                
+                                let text = textLine.string
+
                                 let font = UIFont.systemFont(ofSize: rect.size.height, weight: .regular)
-                                let bestFont = self.bestFittingFont(for: textLine.string, in: rect, fontDescriptor: font.fontDescriptor)
-                                
-                                textLine.string.draw(in: rect, withAttributes: [NSAttributedString.Key.font: bestFont, NSAttributedString.Key.foregroundColor: fontColor])
+                                let attributes = self.bestFittingFont(for: text, in: rect, fontDescriptor: font.fontDescriptor, fontColor: fontColor)
+                            
+                                text.draw(with: rect, options: .usesLineFragmentOrigin, attributes: attributes, context: nil)
                             }
                         }
                         
@@ -566,7 +580,7 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
             let image =  changeImageFromQuality(self.arrayImages[0], dpiQuality: dpiQuality)
             
             guard let data = image.jpegData(compressionQuality: CGFloat(0.5)) else {
-                NCUtility.sharedInstance.stopActivityIndicator()
+                NCUtility.shared.stopActivityIndicator()
                 NCContentPresenter.shared.messageNotification("_error_", description: "_error_creation_file_", delay: TimeInterval(k_dismissAfterSecond), type: NCContentPresenter.messageType.info, errorCode: Int(k_CCErrorCreationFile), forced: true)
                 return
             }
@@ -574,13 +588,13 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
             do {
                 try data.write(to: NSURL.fileURL(withPath: fileNameGenerateExport), options: .atomic)
             } catch {
-                NCUtility.sharedInstance.stopActivityIndicator()
+                NCUtility.shared.stopActivityIndicator()
                 NCContentPresenter.shared.messageNotification("_error_", description: "_error_creation_file_", delay: TimeInterval(k_dismissAfterSecond), type: NCContentPresenter.messageType.info, errorCode: Int(k_CCErrorCreationFile), forced: true)
                 return
             }
         }
         
-        NCUtility.sharedInstance.stopActivityIndicator()
+        NCUtility.shared.stopActivityIndicator()
 
         NCManageDatabase.sharedInstance.addMetadata(metadata)
         
@@ -682,7 +696,7 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
         return imageCompressed
     }
     
-    func bestFittingFont(for text: String, in bounds: CGRect, fontDescriptor: UIFontDescriptor) -> UIFont {
+    func bestFittingFont(for text: String, in bounds: CGRect, fontDescriptor: UIFontDescriptor, fontColor: UIColor) -> [NSAttributedString.Key: Any] {
         
         let constrainingDimension = min(bounds.width, bounds.height)
         let properBounds = CGRect(origin: .zero, size: bounds.size)
@@ -691,6 +705,7 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
         let infiniteBounds = CGSize(width: CGFloat.infinity, height: CGFloat.infinity)
         var bestFontSize: CGFloat = constrainingDimension
         
+        // Search font (H)
         for fontSize in stride(from: bestFontSize, through: 0, by: -1) {
             let newFont = UIFont(descriptor: fontDescriptor, size: fontSize)
             attributes[.font] = newFont
@@ -703,7 +718,20 @@ class NCCreateFormUploadScanDocument: XLFormViewController, NCSelectDelegate, NC
             }
         }
         
-        return UIFont(descriptor: fontDescriptor, size: bestFontSize)
+        // Search kern (W)
+        let font = UIFont(descriptor: fontDescriptor, size: bestFontSize)
+        attributes = [NSAttributedString.Key.font: font, NSAttributedString.Key.foregroundColor: fontColor, NSAttributedString.Key.kern: 0] as [NSAttributedString.Key : Any]
+        for kern in stride(from: 0, through: 100, by: 0.1) {
+            let attributesTmp = [NSAttributedString.Key.font: font, NSAttributedString.Key.foregroundColor: fontColor, NSAttributedString.Key.kern: kern] as [NSAttributedString.Key : Any]
+            let size = text.size(withAttributes: attributesTmp).width
+            if size <= bounds.width {
+                attributes = attributesTmp
+            } else {
+                break
+            }
+        }
+        
+        return attributes
     }
 
 }

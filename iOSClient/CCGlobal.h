@@ -60,10 +60,6 @@
 // Server Status
 #define k_serverStatus                                  @"/status.php"
 
-// webDAV & DAV
-#define k_webDAV                                        @"/remote.php/webdav"
-#define k_dav                                           @"/remote.php/dav"
-
 // Login Flow
 #define k_flowEndpoint                                  @"/index.php/login/flow"
 
@@ -85,7 +81,7 @@
 
 // Database Realm
 #define k_databaseDefault                               @"nextcloud.realm"
-#define k_databaseSchemaVersion                         134
+#define k_databaseSchemaVersion                         141
 
 // Intro selector
 #define k_intro_login                                   0
@@ -172,8 +168,8 @@
 #define k_minCharsSearch                                2
 
 // Selector
-#define selectorSynchronize                             @"synchronize"
-#define selectorDownloadSynchronize                     @"downloadSynchronize"
+#define selectorDownloadFile                            @"downloadFile"
+#define selectorReadFile                                @"readFile"
 #define selectorLoadFileView                            @"loadFileView"
 #define selectorLoadFileViewFavorite                    @"loadFileViewFavorite"
 #define selectorLoadFileQuickLook                       @"loadFileQuickLook"
@@ -181,7 +177,7 @@
 #define selectorLoadOffline                             @"loadOffline"
 #define selectorOpenIn                                  @"openIn"
 #define selectorOpenInDetail                            @"openInDetail"
-#define selectorSave                                    @"save"
+#define selectorSaveAlbum                               @"saveAlbum"
 #define selectorUploadAutoUpload                        @"uploadAutoUpload"
 #define selectorUploadAutoUploadAll                     @"uploadAutoUploadAll"
 #define selectorUploadFile                              @"uploadFile"
